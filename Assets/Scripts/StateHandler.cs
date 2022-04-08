@@ -6,8 +6,6 @@ public enum Move{
     up, down, left, right
 }
 
-
-
 public class State {
     //Default constructor will create goal state 1-8 + 0 at the lower right corner 
     public State() {
@@ -31,10 +29,11 @@ public class State {
             }
         }
         currentEmpty = oldState.currentEmpty;
+        //Debug.Log("Old empty was: " + oldState.currentEmpty + " this empty is: " + currentEmpty);
+        moveMadeHere = move;
         MakeMove(move);
         ComputeCost(); 
     }
-
 
     // Move empty square in the direction of move
     private void MakeMove(Move move) {
@@ -58,12 +57,14 @@ public class State {
     }
     //Swap value in cell at [row,int] with the currently empty cell
     private void SwapCells(int row, int col) {
+        //Debug.Log("Swapping cells at:" + currentEmpty + " with " + row + "," + col);
         int tempValue = m[row,col];
         m[currentEmpty.Item1, currentEmpty.Item2] = tempValue; // 3
         m[row, col] = 0;
 
         currentEmpty.Item1 = row;
-        currentEmpty.Item1 = col;
+        currentEmpty.Item2 = col;
+        //Debug.Log("Empty for this node is now :" + currentEmpty);
     }
 
     // Compute heuristic cost for this state based on the number of wrong positions
@@ -84,6 +85,8 @@ public class State {
     public (int, int) currentEmpty; 
     // The cost for reaching this state
     public int cost;
+
+    public Move moveMadeHere;
 }
 
 public class StateHandler {
@@ -114,17 +117,21 @@ public class StateHandler {
         return actions;
     }
     //Returns the available moves for a current state
-    public static List<Move> GetPossibleMoves(State state) {
+    private static List<Move> GetPossibleMoves(State state) {
         return possibleActions[state.currentEmpty.Item1, state.currentEmpty.Item2];
     }
 
-    // void CreateNextLayer() {
-    //     var moves = GetPossibleMoves(currentState);
-    //     foreach(var move in moves) {
-    //         //children.append(new State(currentState, move));
-    //     }
-    // }
-    
+    public static List<State> GenerateChildStates(State state) {
+        List<Move> moves = GetPossibleMoves(state);
+        List<State> states = new List<State>();
+
+        foreach(Move move in moves) {
+            states.Add(new State(state, move));
+        }
+        
+        return states;
+    }
+
     public static void PrintPossibleMoves() {
         for(int row = 0; row < 3; row++) {
             for(int col = 0; col < 3; col++) {
@@ -136,62 +143,44 @@ public class StateHandler {
         }
     }
 
-    public static void PrintPossibleMoves(State state) {
+    public static void PrintPossibleStateMoves(State state) {
         List<Move> moves = GetPossibleMoves(state);
         foreach(Move move in moves) {
             Debug.Log(move);
         }
     }
 
-    // static void Start() {
-    //     InitializePossibleMoves();
-
-        //print moves
-        // Debug.Log(possibleActions.Length);
+    private static void InitalizeRandomGrid(State state) {
+        int count = 0; // 0 -> empty
+        state.m[0,0] = 6;
+        state.m[0,1] = 4;
+        state.m[0,2] = 7;
+        state.m[1,0] = 8;
+        state.m[1,1] = 5;
+        state.m[1,2] = 0;
+        state.m[2,0] = 3;
+        state.m[2,1] = 2;
+        state.m[2,2] = 1;
+        state.currentEmpty = (1,2);
         // for(int row = 0; row < 3; row++) {
         //     for(int col = 0; col < 3; col++) {
-        //         foreach(var item in possibleActions[row,col]) {
-        //             Debug.Log("index: " + row + "," + col + " " + item);
-        //             //Debug.Log($"index: {row}, {col} {item}");
-        //         }
-        //         //Debug.Log(possibleActions[row,col]);
+        //         state.m[row,col] = count;
+        //         count++;
         //     }
         // }
-        // InitializeGrid();
-        //InitalizeRandomGrid(startState);
-        //PrintGrid(startState);
-        //Debug.Log("cost of current state: " + startState.cost);
-        // Debug.Log("updated cost: " + startState.cost);
-        // State childState = new State(startState, Move.right);
-        // PrintGrid(childState);
-        // Debug.Log("child cost: " + childState.cost);
-
-        // PrintGrid(StateHandler.goalState);
-        // Debug.Log(goalState.cost);
-        // Debug.Log(goalState.)
-    // }
-    
-
-    static void InitalizeRandomGrid(State state) {
-        int count = 0; // 0 -> empty
-        for(int row = 0; row < 3; row++) {
-            for(int col = 0; col < 3; col++) {
-                state.m[row,col] = count;
-                count++;
-            }
-        }
         state.ComputeCost();
     }
 
     // Utility function for printing m of a state
-    public static void PrintGrid(State state) {
+    public static void PrintState(State state) {
         string result = "\n";
         for(int row = 0; row < 3; row++) {
             for(int col = 0; col < 3; col++) {
                 result += state.m[row,col] + " ";
             }
             result += "\n";
-        }   
+        }
+        result += "cost: " + state.cost + "\n";
         Debug.Log(result);
     }
 }
