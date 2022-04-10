@@ -152,6 +152,24 @@ public class StateHandler {
 
     private static void InitalizeRandomGrid(State state) {
         int count = 0; // 0 -> empty
+        state.m[0,0] = 1;
+        state.m[0,1] = 2;
+        state.m[0,2] = 3;
+        state.m[1,0] = 5;
+        state.m[1,1] = 0;
+        state.m[1,2] = 4;
+        state.m[2,0] = 6;
+        state.m[2,1] = 8;
+        state.m[2,2] = 7;
+        state.currentEmpty = (1,1);
+        // for(int row = 0; row < 3; row++) {
+        //     for(int col = 0; col < 3; col++) {
+        //         state.m[row,col] = count;
+        //         count++;
+        //     }
+        // }
+
+        /* hardest: 
         state.m[0,0] = 6;
         state.m[0,1] = 4;
         state.m[0,2] = 7;
@@ -160,14 +178,9 @@ public class StateHandler {
         state.m[1,2] = 0;
         state.m[2,0] = 3;
         state.m[2,1] = 2;
-        state.m[2,2] = 1;
+        state.m[2,2] = 1; 
         state.currentEmpty = (1,2);
-        // for(int row = 0; row < 3; row++) {
-        //     for(int col = 0; col < 3; col++) {
-        //         state.m[row,col] = count;
-        //         count++;
-        //     }
-        // }
+        */
         state.ComputeCost();
     }
 
