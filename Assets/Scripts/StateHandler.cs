@@ -7,7 +7,7 @@ public enum Move{
 }
 
 public class State {
-    //Default constructor will create goal state 1-8 + 0 at the lower right corner 
+    // Default constructor will create goal state 1-8 + 0 at the lower right corner 
     public State() {
         int count = 1; // 0 -> empty
         for(int row = 0; row < 3; row++) {
@@ -21,7 +21,7 @@ public class State {
             }
         }
     }
-    //Makes a copy of oldState and performs a move, move
+    // Makes a copy of oldState and performs a move, move
     public State(State oldState, Move move) {
         for(int row = 0; row < 3; row++) {
             for(int col = 0; col < 3; col++) {
@@ -29,7 +29,6 @@ public class State {
             }
         }
         currentEmpty = oldState.currentEmpty;
-        //Debug.Log("Old empty was: " + oldState.currentEmpty + " this empty is: " + currentEmpty);
         moveMadeHere = move;
         MakeMove(move);
         ComputeCost(); 
@@ -55,7 +54,7 @@ public class State {
                 break;
         }
     }
-    //Swap value in cell at [row,int] with the currently empty cell
+    // Swap value in cell at [row,int] with the currently empty cell
     private void SwapCells(int row, int col) {
         //Debug.Log("Swapping cells at:" + currentEmpty + " with " + row + "," + col);
         int tempValue = m[row,col];
@@ -64,10 +63,10 @@ public class State {
 
         currentEmpty.Item1 = row;
         currentEmpty.Item2 = col;
-        //Debug.Log("Empty for this node is now :" + currentEmpty);
     }
 
-    // Compute heuristic cost for this state based on the number of wrong positions
+    // Compute heuristic cost h1 or h2
+    // h1 is the number of wrong positions, h2 manhattan distance to correct solution
     public void ComputeCost() {
         if(h1) {
             int sum = 0;
@@ -91,6 +90,7 @@ public class State {
 
     }
 
+    // For a given value, return the correct position
     (int, int) GetIndexFromValue(int val) {
         if(val == 1) return (0,0);
         if(val == 2) return (0,1);
@@ -103,12 +103,16 @@ public class State {
         if(val == 0) return (2,2);
         return (-1, -1);
     }
+
+    // Compute manhattan distance for a given value,
+    // compared to where it should be.
     int ManhattanDistance(int value, int y0, int x0) {
         (int y1, int x1) = GetIndexFromValue(value);
         int distance = Math.Abs(x0 - x1) + Math.Abs(y0 - y1);
         return distance;
     }
 
+    // Compute the hash key for this matrix
     public string ComputeHashKey() {
         string result = "";
         for(int row =0; row < 3; row++) {
@@ -125,25 +129,27 @@ public class State {
     public (int, int) currentEmpty; 
     // The cost for reaching this state
     public int cost;
-
-    private bool h1 = false;
+    // Use h1 or h2 heuristic?
+    private bool h1 = true;
+    // The latest move to reach this state.
     public Move moveMadeHere;
 }
 
 public class StateHandler {
-
+    //Define goalstate as 1-8, 0 at bottom right corner (default State ctor)
     public static State goalState = new State();
-    //public State startState = new State();
     //List of possible action at every [y,x] coordinate in the grid
     private static List<Move>[,] possibleActions = InitializePossibleMoves();
 
-
+    //Generate random start state
     public static State GenerateStartState() {
         State start = new State();
         InitalizeRandomGrid(start);
 
         return start;
     }
+
+    // Store possible moves at each location
     private static List<Move>[,] InitializePossibleMoves() {
         List<Move>[,] actions = new List<Move>[3,3];
         for(int row = 0; row < 3; row++) {
@@ -157,11 +163,11 @@ public class StateHandler {
         }
         return actions;
     }
-    //Returns the available moves for a current state
+    // Returns all available moves for a current state
     private static List<Move> GetPossibleMoves(State state) {
         return possibleActions[state.currentEmpty.Item1, state.currentEmpty.Item2];
     }
-
+    // Generates possible child states for current state
     public static List<State> GenerateChildStates(State state) {
         List<Move> moves = GetPossibleMoves(state);
         List<State> states = new List<State>();
@@ -171,24 +177,6 @@ public class StateHandler {
         }
         
         return states;
-    }
-
-    public static void PrintPossibleMoves() {
-        for(int row = 0; row < 3; row++) {
-            for(int col = 0; col < 3; col++) {
-                foreach(var item in possibleActions[row,col]) {
-                    Debug.Log("index: " + row + "," + col + " " + item);
-                }
-                //Debug.Log(possibleActions[row,col]);
-            }
-        }
-    }
-
-    public static void PrintPossibleStateMoves(State state) {
-        List<Move> moves = GetPossibleMoves(state);
-        foreach(Move move in moves) {
-            Debug.Log(move);
-        }
     }
 
     private static void InitalizeRandomGrid(State state) {
@@ -223,18 +211,5 @@ public class StateHandler {
         state.currentEmpty = (1,2);
         
         state.ComputeCost();
-    }
-
-    // Utility function for printing m of a state
-    public static void PrintState(State state) {
-        string result = "\n";
-        for(int row = 0; row < 3; row++) {
-            for(int col = 0; col < 3; col++) {
-                result += state.m[row,col] + " ";
-            }
-            result += "\n";
-        }
-        result += "cost: " + state.cost + "\n";
-        Debug.Log(result);
     }
 }
