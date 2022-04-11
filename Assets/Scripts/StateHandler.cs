@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System;
 public enum Move{
     up, down, left, right
 }
@@ -69,14 +69,54 @@ public class State {
 
     // Compute heuristic cost for this state based on the number of wrong positions
     public void ComputeCost() {
-        int sum = 0;
-        for(int row = 0; row < 3; row++) {
-            for(int col = 0; col < 3; col++) {
-                if(m[row, col] != 0 && m[row, col] != StateHandler.goalState.m[row, col])
-                    ++sum;
+        if(h1) {
+            int sum = 0;
+            for(int row = 0; row < 3; row++) {
+                for(int col = 0; col < 3; col++) {
+                    if(m[row, col] != 0 && m[row, col] != StateHandler.goalState.m[row, col])
+                        ++sum;
+                }
             }
+            cost = sum;
         }
-        cost = sum;
+        else {
+            int sum = 0;
+            for(int row = 0; row < 3; row++) {
+                for(int col = 0; col < 3; col++) {
+                    sum += ManhattanDistance(m[row,col], row, col);
+                }
+            }
+            cost = sum;
+        }
+
+    }
+
+    (int, int) GetIndexFromValue(int val) {
+        if(val == 1) return (0,0);
+        if(val == 2) return (0,1);
+        if(val == 3) return (0,2);
+        if(val == 4) return (1,0);
+        if(val == 5) return (1,1);
+        if(val == 6) return (1,2);
+        if(val == 7) return (2,0);
+        if(val == 8) return (2,1);
+        if(val == 0) return (2,2);
+        return (-1, -1);
+    }
+    int ManhattanDistance(int value, int y0, int x0) {
+        (int y1, int x1) = GetIndexFromValue(value);
+        int distance = Math.Abs(x0 - x1) + Math.Abs(y0 - y1);
+        return distance;
+    }
+
+    public string ComputeHashKey() {
+        string result = "";
+        for(int row =0; row < 3; row++) {
+            for(int col =0; col < 3; ++col) {
+                result += m[row,col];
+            }        
+        }
+        return result;
     }
     
     // This is the actual state
@@ -86,6 +126,7 @@ public class State {
     // The cost for reaching this state
     public int cost;
 
+    private bool h1 = false;
     public Move moveMadeHere;
 }
 
@@ -151,17 +192,17 @@ public class StateHandler {
     }
 
     private static void InitalizeRandomGrid(State state) {
-        int count = 0; // 0 -> empty
-        state.m[0,0] = 1;
-        state.m[0,1] = 2;
-        state.m[0,2] = 3;
-        state.m[1,0] = 5;
-        state.m[1,1] = 0;
-        state.m[1,2] = 4;
-        state.m[2,0] = 6;
-        state.m[2,1] = 8;
-        state.m[2,2] = 7;
-        state.currentEmpty = (1,1);
+        // int count = 0; // 0 -> empty
+        // state.m[0,0] = 1;
+        // state.m[0,1] = 2;
+        // state.m[0,2] = 3;
+        // state.m[1,0] = 5;
+        // state.m[1,1] = 0;
+        // state.m[1,2] = 4;
+        // state.m[2,0] = 6;
+        // state.m[2,1] = 8;
+        // state.m[2,2] = 7;
+        // state.currentEmpty = (1,1);
         // for(int row = 0; row < 3; row++) {
         //     for(int col = 0; col < 3; col++) {
         //         state.m[row,col] = count;
@@ -169,7 +210,7 @@ public class StateHandler {
         //     }
         // }
 
-        /* hardest: 
+        //  hardest: 
         state.m[0,0] = 6;
         state.m[0,1] = 4;
         state.m[0,2] = 7;
@@ -180,7 +221,7 @@ public class StateHandler {
         state.m[2,1] = 2;
         state.m[2,2] = 1; 
         state.currentEmpty = (1,2);
-        */
+        
         state.ComputeCost();
     }
 

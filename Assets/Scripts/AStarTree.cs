@@ -4,6 +4,7 @@ using UnityEngine;
 using Priority_Queue; 
 //Priority queue from https://github.com/BlueRaja/High-Speed-Priority-Queue-for-C-Sharp
 using UnityEngine.UI;
+using System.Diagnostics;
 
 public class AStarTree : MonoBehaviour {  
 
@@ -15,14 +16,16 @@ public class AStarTree : MonoBehaviour {
             parent = _parent;
             children = new List<Node>();
             fCost = depth + state.cost;
+            hashKey = _state.ComputeHashKey();
         }
 
-        
         public State state;
         public List<Node> children;
         public Node parent { get; set; }
         public int fCost;
         public int depth {get; set; }
+
+        public string hashKey;
     }
 
     
@@ -30,25 +33,36 @@ public class AStarTree : MonoBehaviour {
     Node startNode = new Node(null, StateHandler.GenerateStartState(), 0);
     
     SimplePriorityQueue<Node,int> openList = new SimplePriorityQueue<Node, int>(); //Frontier list
-    List<Node> closedList = new List<Node>(); //Expanded list
+    // List<Node> closedList = new List<Node>(); //Expanded list
+    // HashSet<string> _closedList = new HashSet<string>(10000);
+    Dictionary<string, Node> _closedList = new Dictionary<string, Node>(200000);
+
+    
 
     private void Start() {
-        Debug.Log(startNode);
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+        UnityEngine.Debug.Log(startNode);
         StateHandler.PrintState(startNode.state);
         //StateHandler.PrintPossibleMoves();
         //StateHandler.PrintPossibleStateMoves(startNode.state);
         InitiateTextElements();
         UpdateTextElements(startNode.state);
+        UnityEngine.Debug.LogError("Starting A*");
         Astar();
+        stopwatch.Stop();
+        UnityEngine.Debug.LogError("Elapsed Time:" + stopwatch.ElapsedMilliseconds);
+        elapsedTimetext.text = "Elapsed time [ms]: " + stopwatch.ElapsedMilliseconds  + "";
     }
 
     public Text textElement;
     public Canvas canvas;
     private List<Text> textElements;
 
+    public Text elapsedTimetext;
     private void InitiateTextElements() {
         textElements = new List<Text>(9);
-        Debug.Log(textElements.Count);
+        UnityEngine.Debug.Log(textElements.Count);
         for(int row = 0; row < 3; row++) {
             for(int col =0; col < 3; ++col) {
                 var text = Instantiate(textElement);
@@ -91,15 +105,15 @@ public class AStarTree : MonoBehaviour {
         {
             nextState = new State(nextState, move);
             UpdateTextElements(nextState);
-            Debug.Log(move);
-            yield return new WaitForSeconds(2);
+            UnityEngine.Debug.Log(move);
+            yield return new WaitForSeconds(0.8f);
         }
     }
 
     List<Move> GetSolutionMoves(Node fromNode) {
         List<Move> moves = new List<Move>();
         while(fromNode.parent != null) {
-            moves.Add(fromNode.parent.state.moveMadeHere);
+            moves.Add(fromNode.state.moveMadeHere);
             fromNode = fromNode.parent;
         }
         moves.Reverse();
@@ -111,7 +125,8 @@ public class AStarTree : MonoBehaviour {
         if(fromNode.parent != null) {
             msg += PrintSolution(fromNode.parent);
         }
-        msg += fromNode.state.moveMadeHere + " ";
+        if(fromNode.parent != null)
+            msg += fromNode.state.moveMadeHere + " ";
         // string msg = fromNode.state.moveMadeHere + ":" + fromNode.state.cost + " ";
         // while(fromNode.parent != null) {
         //     msg += fromNode.parent.state.moveMadeHere + ":" + fromNode.parent.state.cost + " ";
@@ -124,124 +139,117 @@ public class AStarTree : MonoBehaviour {
     }
 
     void Astar() {
+        //Enque start node in Open
         openList.Enqueue(startNode, startNode.fCost);
-        //Debug.Log("# items in openlist: " + openList.Count);
+
+
         bool foundSolution = false;
         int counter = 0;
 
         while(openList.Count != 0) {
-            if(counter > 10000) {
-                Debug.Log("counter reached limit");
+            if(counter > 500000) {
+                UnityEngine.Debug.LogError("counter reached limit");
                 break;
             }
-            //Debug.Log("Iterator: " + counter++);
+            ++counter;
+            
+            // string msg="";
+            // foreach(Node n in openList) {
+            //     msg += n.fCost + " "; 
+            // }
 
-            //Debug.Log("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-            string msg="";
-            foreach(Node n in openList) {
-                msg += n.fCost + " "; 
-            }
-            //Debug.Log("Fcost in open list : " + msg);
+            //Remove node from open list with minimum cost f
             Node node = openList.Dequeue();
-            //Debug.Log("Dequed node with fcost: " + node.fCost + " was: ");
-            //StateHandler.PrintState(node.state);
-            //Debug.Log("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
 
-
+            //Check if node is end state -> solution has been found
             if(node.state.cost == 0) {
-                Debug.Log("SOLUTION FOUND");
+                UnityEngine.Debug.Log("SOLUTION FOUND");
                 foundSolution = true;
-                Debug.Log(PrintSolution(node));
+                StateHandler.PrintState(node.state);
+                UnityEngine.Debug.Log(PrintSolution(node));
                 // UpdateTextElements(node.state);
                 StartCoroutine(PerformMoves(GetSolutionMoves(node)));
 
                 break;
             }
-            //Debug.Log("Adding the node to closed list");
-            closedList.Add(node);
+            
+            //Add to closed list and expand node generating all of its children
+            // closedList.Add(node);
+            _closedList[node.hashKey] = node;
+            // _closedList.Add(node.hashKey, node);
             //Debug.Log("Expanding nodes children");
             ExpandNode(node);
-
         }
 
         if(!foundSolution)
         {
-            Debug.Log("NO SOLUTION FOUND");
+            UnityEngine.Debug.Log("NO SOLUTION FOUND");
         }
-        Debug.Log("Max depth" + maxdepth);
+        UnityEngine.Debug.LogError("Max depth" + maxdepth);
+        // Debug.Log("Closed list: " + closedList.Count);
+        UnityEngine.Debug.LogError("Closed dictionary: " + _closedList.Count);
+        UnityEngine.Debug.LogError("Open list:" + openList.Count);
+        
     }
 
-    private void ExpandNode(Node node) {
-        // Get all possible actions from state in node
-        //Debug.Log("Current node + move to get here was: " + node.state.moveMadeHere );
-        //StateHandler.PrintState(node.state);
-        //Debug.Log("Current Empty cell is: " + node.state.currentEmpty);
-        //Debug.Log("Possible moves for current node: ");
-        List<State> childStates = StateHandler.GenerateChildStates(node.state);
-        //StateHandler.PrintPossibleStateMoves(node.state);
+    private void ExpandNode(Node parentNode) {
+        // Get all possible actions from state in current node
+        List<State> childStates = StateHandler.GenerateChildStates(parentNode.state);
 
-        //Debug.Log("Children states are:");
-        // Generate new  nodes for each state, link child node with parent node
+        //Generate new nodes for each state, link child node with parent node
         foreach(State state in childStates) {
             //StateHandler.PrintState(state);
             
-            Node childNode = new Node(node, state, node.depth + 1);
-            maxdepth = maxdepth < node.depth + 1 ? node.depth + 1 : maxdepth;
+            Node childNode = new Node(parentNode, state, parentNode.depth + 1);
+
+            maxdepth = maxdepth < parentNode.depth + 1 ? parentNode.depth + 1 : maxdepth;
             //Debug.Log("childNode empty: " + childNode.currentEmpty);
+            /*
+                A->B->C->D 
+                C2 lägre cost än C
+
+                A->B->C2
+
+            For every child node n’ do
+            – evaluate h(n’) and compute f(n’) = g(n’) + h(n’) = g(n)+c(n,n’)+h(n’) - V
+
+            – If n’ is already on OPEN or CLOSED compare its new f with the old f. If the
+            new value is higher, discard the node. Otherwise, replace old f with new f
+            and reopen the node -> flytta från closed till open?
+
+            – Else, put n’ with its f value in the right order in OPEN
+ */         
+            Node _nodeInClosedList;
+            bool _inClosed = _closedList.TryGetValue(childNode.hashKey, out _nodeInClosedList);
             
-            // (bool,Node) inClosed = ExistInClosed(state);
-            // (bool,Node) inOpen = ExistInOpen(state);
-            //Debug.Log("child node fcost:" + childNode.fCost);
-            (bool inClosed, Node nodeInClosedList) = ExistInClosed(state);
-            (bool inOpen, Node nodeInOpenList) = ExistInOpen(state);
+            
+            // (bool inClosed, Node nodeInClosedList) = ExistInClosed(state);
+            // (bool inOpen, Node nodeInOpenList) = ExistInOpen(state);
 
-            if(inClosed) {
-                //Debug.Log("Child node was found in closed list");
-                if(childNode.fCost < nodeInClosedList.fCost) {
-                    //Debug.Log("Updating cost in list which was: " + nodeInClosedList.fCost);
-                    //replace cost
-                    //Debug.LogError("Removing node in closed list");
-                    //Debug.LogError("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-                    //closedList.Remove(nodeInClosedList);
-                    //Debug.LogError("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-                    //Debug.LogError("Expanding the child node again");
-                    //ExpandNode(childNode);
-                    // nodeInClosedList.fCost = childNode.fCost;
-                    // nodeInClosedList.parent = node;
-                    // nodeInClosedList.depth = childNode.depth;
-                    //reopen node?
-                    // ExpandNode(nodeInOpenList);
+            if(_inClosed) {
+                if(childNode.fCost < _nodeInClosedList.fCost) {
+                    //Remove the node already in list and add new child node to open list
+                    // closedList.Remove(nodeInClosedList);
+                    _closedList.Remove(_nodeInClosedList.hashKey);
+                    openList.Enqueue(childNode, childNode.fCost);
                 }
-                //Debug.Log("Did not add to list, more expensive path");
             }
-            else if(inOpen) {
-                    //Debug.Log("Child node was found in open list");
-                    if(childNode.fCost < nodeInOpenList.fCost) {
-                        //Debug.Log("Updating cost in list which was: " + nodeInOpenList.fCost);
-                        //Debug.LogError("Removing node in open list");
-                        //Debug.LogError("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-                        //openList.Remove(nodeInOpenList);
-                        //Debug.LogError("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-                        //Debug.LogError("Expanding the child node again");
-                        //ExpandNode(childNode);
-                        //replace cost
-                        // openList.UpdatePriority(nodeInOpenList, childNode.fCost);
-                        // nodeInOpenList.parent = node;
-                        // nodeInClosedList.depth = childNode.depth;
-
-                        // openResult.fCost = childNode.fCost; 
-                        //reopen node?
-                        // ExpandNode(nodeInOpenList);
-                    }
-                //Debug.Log("Did not add to list, more expensive path");
-            }
-            if(!inOpen && !inClosed) {
-                //does not exist in either open or closed list, add to openlist 
-                //Debug.Log("Adding childNode to openlist: ");
-                //StateHandler.PrintState(childNode.state);
+            // else if(inOpen) {
+            //         if(childNode.fCost < nodeInOpenList.fCost) {
+            //             //Remove the node already in list and add new child node to open list
+            //             openList.Remove(nodeInOpenList);
+            //             openList.Enqueue(childNode, childNode.fCost);
+            //         }
+            // }
+            else 
                 openList.Enqueue(childNode, childNode.fCost);
-                //Debug.Log("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
-            }
+            // if(!inOpen && !_inClosed) {
+            //     //does not exist in either open or closed list, add to openlist 
+            //     //Debug.Log("Adding childNode to openlist: ");
+            //     //StateHandler.PrintState(childNode.state);
+            //     openList.Enqueue(childNode, childNode.fCost);
+            //     //Debug.Log("# of elements in closed list:" + closedList.Count + " # of elements in open list: "+ openList.Count);
+            // }
         }
 
         //Compute F cost (done automatically)
@@ -265,19 +273,11 @@ public class AStarTree : MonoBehaviour {
         return true; // All are equal
     }
 
-    private (bool, Node) ExistInOpen(State state) {
-        foreach(Node node in openList) {
-            if(CompareStates(state, node.state))  
-                return (true, node);
-        }
-        return (false, null);
-    }
-
-    private (bool, Node) ExistInClosed(State state) {
-        foreach(Node node in closedList) {
-            if(CompareStates(state, node.state))
-                return (true, node);
-        }
-        return (false, null);
-    }
+    // private (bool, Node) ExistInOpen(State state) {
+    //     foreach(Node node in openList) {
+    //         if(CompareStates(state, node.state))  
+    //             return (true, node);
+    //     }
+    //     return (false, null);
+    // }
 }
