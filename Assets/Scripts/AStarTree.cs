@@ -23,31 +23,75 @@ public class AStarTree : MonoBehaviour {
 
         public string hashKey;
     }
-
-    Node startNode = new Node(null, StateHandler.GenerateStartState(), 0);
-    
+    // Root node of the solution
+    Node startNode ;// = new Node(null, StateHandler.GenerateStartState(), 0);
+    // Priority queue with lowest fcost as top node
     SimplePriorityQueue<Node,int> openList = new SimplePriorityQueue<Node, int>(); //Frontier list
+    //Hash map with of nodes that have been processed, stores state as key string
     Dictionary<string, Node> _closedList = new Dictionary<string, Node>(200000);
 
+    // Prefab text element object
+    public Text textPrefab;
+    public Text elapsedTimeText;
     
+    public Text heuristicText;
+    public Canvas canvas;
+    
+    // List contains text tiles for the puzzle
+    private List<Text> textElements;
 
+    private IEnumerator coroutine;
+    
     private void Start() {
         InitiateTextElements();
+    }
+
+    public void ResetPuzzle() {
+        openList.Clear();
+        _closedList.Clear();
+        if(coroutine != null) {
+            StopCoroutine(coroutine);     
+            coroutine = null;   
+        }
+    }
+
+    public void SwapHeuristic() {
+        StateHandler.useH1 = !StateHandler.useH1;
+
+        if(StateHandler.useH1)
+            heuristicText.text = "Heuristic: H1";
+        else
+            heuristicText.text = "Heuristic: H2";
+
+    }
+    public void EasyPuzzle() {
+        ResetPuzzle();
+        startNode = new Node(null, StateHandler.EasyGrid(), 0);
         UpdateTextElements(startNode.state);
+    }
+    public void HardPuzzle() {
+        ResetPuzzle();
+        startNode = new Node(null, StateHandler.HardGrid(), 0);
+        UpdateTextElements(startNode.state);
+    }
+    public void RandomPuzzle() {
+        ResetPuzzle();
+        startNode = new Node(null, StateHandler.InitalizeRandomGrid(), 0);
+        UpdateTextElements(startNode.state);
+    }
+
+    public void SolvePuzzle() {
+        //its already solving a puzzle
+        if(coroutine != null)
+            return;
+        
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
         Astar();
         stopwatch.Stop();
         elapsedTimeText.text = "Elapsed time [ms]: " + stopwatch.ElapsedMilliseconds  + "";
+        
     }
-
-    // Prefab text element object
-    public Text textPrefab;
-    public Text elapsedTimeText;
-    public Canvas canvas;
-    
-    // List contains text tiles for the puzzle
-    private List<Text> textElements;
 
     //Create the text tiles for each number
     private void InitiateTextElements() {
@@ -60,8 +104,9 @@ public class AStarTree : MonoBehaviour {
                 
                 RectTransform rectTransform = text.GetComponent<RectTransform>();
                 Vector2 pos = rectTransform.anchoredPosition;
-                pos.x = col * 100; 
-                pos.y = -row * 100;
+                Vector2 offset = new Vector2(-100, 100);
+                pos.x = offset.x + col * 100; 
+                pos.y = offset.y + (-row * 100);
 
                 rectTransform.anchoredPosition = pos;
                 textElements.Add(text);
@@ -138,7 +183,8 @@ public class AStarTree : MonoBehaviour {
                 foundSolution = true;
                 UnityEngine.Debug.Log(PrintSolution(node));
                 // UpdateTextElements(node.state);
-                StartCoroutine(PerformMoves(GetSolutionMoves(node)));
+                coroutine = PerformMoves(GetSolutionMoves(node));
+                StartCoroutine(coroutine);
                 break;
             }
             

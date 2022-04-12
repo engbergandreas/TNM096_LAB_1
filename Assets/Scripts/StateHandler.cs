@@ -20,6 +20,7 @@ public class State {
                 count++;
             }
         }
+        currentEmpty = (2,2);
     }
     // Makes a copy of oldState and performs a move, move
     public State(State oldState, Move move) {
@@ -35,7 +36,7 @@ public class State {
     }
 
     // Move empty square in the direction of move
-    private void MakeMove(Move move) {
+    public void MakeMove(Move move) {
         int row = currentEmpty.Item1;
         int col = currentEmpty.Item2;
         switch (move)
@@ -68,7 +69,7 @@ public class State {
     // Compute heuristic cost h1 or h2
     // h1 is the number of wrong positions, h2 manhattan distance to correct solution
     public void ComputeCost() {
-        if(h1) {
+        if(StateHandler.useH1) {
             int sum = 0;
             for(int row = 0; row < 3; row++) {
                 for(int col = 0; col < 3; col++) {
@@ -130,24 +131,27 @@ public class State {
     // The cost for reaching this state
     public int cost;
     // Use h1 or h2 heuristic?
-    private bool h1 = true;
+    // private bool h1 = false;
     // The latest move to reach this state.
     public Move moveMadeHere;
 }
 
 public class StateHandler {
     //Define goalstate as 1-8, 0 at bottom right corner (default State ctor)
+    public static bool useH1 = false;
     public static State goalState = new State();
+
+    public static State startState = new State();
     //List of possible action at every [y,x] coordinate in the grid
     private static List<Move>[,] possibleActions = InitializePossibleMoves();
 
     //Generate random start state
-    public static State GenerateStartState() {
-        State start = new State();
-        InitalizeRandomGrid(start);
+    // public static State GenerateStartState() {
+    //     State start = new State();
+    //     InitalizeRandomGrid(start);
 
-        return start;
-    }
+    //     return start;
+    // }
 
     // Store possible moves at each location
     private static List<Move>[,] InitializePossibleMoves() {
@@ -179,37 +183,53 @@ public class StateHandler {
         return states;
     }
 
-    private static void InitalizeRandomGrid(State state) {
-        // int count = 0; // 0 -> empty
-        // state.m[0,0] = 1;
-        // state.m[0,1] = 2;
-        // state.m[0,2] = 3;
-        // state.m[1,0] = 5;
-        // state.m[1,1] = 0;
-        // state.m[1,2] = 4;
-        // state.m[2,0] = 6;
-        // state.m[2,1] = 8;
-        // state.m[2,2] = 7;
-        // state.currentEmpty = (1,1);
-        // for(int row = 0; row < 3; row++) {
-        //     for(int col = 0; col < 3; col++) {
-        //         state.m[row,col] = count;
-        //         count++;
-        //     }
-        // }
 
-        //  hardest: 
-        state.m[0,0] = 6;
-        state.m[0,1] = 4;
-        state.m[0,2] = 7;
-        state.m[1,0] = 8;
-        state.m[1,1] = 5;
-        state.m[1,2] = 0;
-        state.m[2,0] = 3;
-        state.m[2,1] = 2;
-        state.m[2,2] = 1; 
-        state.currentEmpty = (1,2);
+    public static State EasyGrid() {
+        startState.m[0,1] = 2;
+        startState.m[0,0] = 1;
+        startState.m[0,2] = 3;
+        startState.m[1,0] = 5;
+        startState.m[1,1] = 0;
+        startState.m[1,2] = 4;
+        startState.m[2,0] = 6;
+        startState.m[2,1] = 8;
+        startState.m[2,2] = 7;
+        startState.currentEmpty = (1,1);
+        startState.ComputeCost();
+        return startState;
+    }
+
+    public static State HardGrid() {
+        startState.m[0,0] = 6;
+        startState.m[0,1] = 4;
+        startState.m[0,2] = 7;
+        startState.m[1,0] = 8;
+        startState.m[1,1] = 5;
+        startState.m[1,2] = 0;
+        startState.m[2,0] = 3;
+        startState.m[2,1] = 2;
+        startState.m[2,2] = 1; 
+        startState.currentEmpty = (1,2);
         
-        state.ComputeCost();
+        startState.ComputeCost();
+        return startState;
+    }
+
+    // Generate a random state
+    public static State InitalizeRandomGrid() {
+
+        System.Random r = new System.Random();
+
+        int iterations = 30;
+        for(int i = 0; i < iterations; i++) {
+            var moves = GetPossibleMoves(startState);
+            int moveIdx = r.Next(0, moves.Count);
+            startState.MakeMove(moves[moveIdx]);
+        }
+
+        startState.ComputeCost();
+        
+        return startState;
+
     }
 }
